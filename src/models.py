@@ -1,19 +1,43 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import String, Boolean
-from sqlalchemy.orm import Mapped, mapped_column
-
+from sqlalchemy import String, Boolean,Table,Column,ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column , relationship
 db = SQLAlchemy()
+from typing import List
+
+
 
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
-    password: Mapped[str] = mapped_column(nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False)
+    name: Mapped[str] = mapped_column(nullable = False)
+    password: Mapped[str] = mapped_column(nullable = False)
+    profile: Mapped["Profile"] = relationship(back_populates="user")
+    posts: Mapped[List["Post"]] = relationship(back_populates="author")
+
+class Profile(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    edad: Mapped[int] = mapped_column(nullable = True)
+    Verificado: Mapped[bool] = mapped_column(nullable = True)
+    user: Mapped["User"] = relationship(back_populates="profile")
 
 
-    def serialize(self):
-        return {
-            "id": self.id,
-            "email": self.email,
-            # do not serialize the password, its a security breach
-        }
+class Post(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    author: Mapped["User"] = relationship(back_populates="posts")
+    tags: Mapped[List["Tag"]] = relationship(secondary="post_tag", back_populates="posts")
+
+class Tag(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    posts: Mapped[List["Post"]] = relationship(secondary="post_tag", back_populates="tags")
+
+
+post_tag = Table(
+    "post_tag",
+    db.metadata,
+    Column("post_id", ForeignKey("post.id")),
+    Column("tag_id", ForeignKey("tag.id"))
+)
+
+
+
